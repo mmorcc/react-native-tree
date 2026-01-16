@@ -1,261 +1,224 @@
-1️⃣ Theme（如果你项目已经是 M3，可直接跳过）
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+// 表格行数据模型
+data class TableRowData(
+    val header: String, // 左侧表头文本
+    val content: @Composable () -> Unit // 右侧自定义内容
+)
+
+// Tab 数据模型
+data class TabItem(
+    val tabTitle: String, // Tab 标题
+    val tableData: List<TableRowData> // 对应表格数据
+)
+
+// 浅灰边框颜色常量
+private val LIGHT_GRAY_BORDER = Color(0xFFE0E0E0)
+
+/**
+ * 带 Wrap 布局 Tab 的表格组件
+ * @param tabItems Tab 列表数据
+ */
 @Composable
-fun AppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
+fun WrapTabTable(
+    tabItems: List<TabItem>
 ) {
-    val colorScheme = if (darkTheme) {
-        darkColorScheme()
-    } else {
-        lightColorScheme()
-    }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography(),
-        content = content
-    )
-}
-
-二、可复用组件设计（拆 3 个组件）
-
-我们拆成：
-
-ExpandableSection —— 可折叠整体
-
-BulletText —— 圆点 + 无障碍
-
-InfoDetailScreen —— 页面组合
-
-2️⃣ BulletText（圆点 + 无障碍，可复用）
-@Composable
-fun BulletText(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .semantics {
-                contentDescription = "Bullet item: $text"
-            },
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = "•",
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(end = 8.dp)
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-3️⃣ ExpandableSection（核心可复用折叠组件）
-@Composable
-fun ExpandableSection(
-    icon: ImageVector,
-    title: String,
-    detail: String,
-    bullets: List<String>,
-    modifier: Modifier = Modifier
-) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    // 当前选中的 Tab 索引
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val currentTableData = tabItems[selectedTabIndex].tableData
 
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize()
+            .padding(16.dp)
+            .semantics { role = Role.Group }
     ) {
-
+        // ========== 横向 Wrap 布局 Tab 栏（带圆角浅灰边框） ==========
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded }
-                .padding(vertical = 12.dp)
-                .semantics {
-                    contentDescription =
-                        if (expanded) "Collapse section $title"
-                        else "Expand section $title"
-                },
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = detail,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Icon(
-                imageVector = if (expanded)
-                    Icons.Default.KeyboardArrowUp
-                else
-                    Icons.Default.KeyboardArrowDown,
-                contentDescription = null
-            )
-        }
-
-        if (expanded) {
-            Column(modifier = Modifier.padding(start = 8.dp)) {
-                bullets.forEach {
-                    BulletText(text = it)
+            tabItems.forEachIndexed { index, item ->
+                val isSelected = selectedTabIndex == index
+                Tab(
+                    selected = isSelected,
+                    onClick = { selectedTabIndex = index },
+                    modifier = Modifier
+                        .border(
+                            width = 1.dp,
+                            color = LIGHT_GRAY_BORDER,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .background(
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .semantics { role = Role.Tab }
+                ) {
+                    Text(
+                        text = item.tabTitle,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
+
+        // ========== 表格区域（带浅灰边框，无圆角） ==========
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+                .border(1.dp, LIGHT_GRAY_BORDER) // 表格边框，无圆角
+                .background(MaterialTheme.colorScheme.surface),
+            verticalArrangement = Arrangement.spacedBy(1.dp) // 行分隔线
+        ) {
+            items(currentTableData) { rowData ->
+                TableRow(
+                    header = rowData.header,
+                    content = rowData.content
+                )
+            }
+        }
     }
 }
 
-
-✔ rememberSaveable（旋转不丢状态）
-✔ animateContentSize()（平滑动画）
-✔ 完整无障碍描述
-
-三、完整页面（Material 3 + 滚动 + 底部按钮）
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * 表格行组件（左侧灰色表头 + 右侧内容）
+ */
 @Composable
-fun InfoDetailScreen(
-    onBack: () -> Unit,
-    onLearnMore: () -> Unit
+private fun TableRow(
+    header: String,
+    content: @Composable () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Info Page") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .semantics { role = Role.Row },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 左侧表头（灰色背景）
+        Box(
+            modifier = Modifier
+                .size(width = 120.dp, height = 56.dp)
+                .background(Color(0xFFF5F5F5))
+                .padding(8.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = header,
+                fontSize = 14.sp,
+                color = Color(0xFF666666),
+                modifier = Modifier.semantics { role = Role.Header }
+            )
+        }
+
+        // 右侧内容区域
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            content()
+        }
+    }
+}
+
+// ========== 使用示例 ==========
+@Composable
+fun WrapTabTableDemo() {
+    val tabItems = listOf(
+        TabItem(
+            tabTitle = "基本信息",
+            tableData = listOf(
+                TableRowData("姓名") { Text("张三") },
+                TableRowData("年龄") { Text("25") },
+                TableRowData("性别") { Text("男") },
+                TableRowData("状态") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Navigate back"
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "已验证",
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Green
                         )
+                        Text(text = "已验证", modifier = Modifier.padding(start = 4.dp))
                     }
                 }
             )
-        },
-        bottomBar = {
-            Button(
-                onClick = onLearnMore,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text("Learn More")
-            }
-        }
-    ) { padding ->
-
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
-
-            Image(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = "Header image",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                contentScale = ContentScale.Crop
+        ),
+        TabItem(
+            tabTitle = "联系方式",
+            tableData = listOf(
+                TableRowData("手机号") { Text("138****1234") },
+                TableRowData("邮箱") { Text("zhangsan@xxx.com") },
+                TableRowData("地址") { Text("北京市朝阳区") },
+                TableRowData("操作") {
+                    Button(onClick = { /* 点击逻辑 */ }) {
+                        Text("编辑")
+                    }
+                }
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Main Title",
-                style = MaterialTheme.typography.headlineSmall
+        ),
+        TabItem(
+            tabTitle = "更多设置",
+            tableData = listOf(
+                TableRowData("通知权限") { Text("已开启") },
+                TableRowData("缓存大小") { Text("2.5GB") },
+                TableRowData("版本号") { Text("v1.0.0") }
             )
+        )
+    )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ExpandableSection(
-                icon = Icons.Default.Info,
-                title = "Feature Title",
-                detail = "Tap to see details",
-                bullets = listOf(
-                    "First bullet description",
-                    "Second bullet description",
-                    "Third bullet description",
-                    "Fourth bullet description"
-                )
-            )
-
-            Spacer(modifier = Modifier.height(80.dp))
-        }
+    MaterialTheme {
+        WrapTabTable(tabItems = tabItems)
     }
 }
 
+// ========== 预览 ==========
+import androidx.compose.ui.tooling.preview.Preview
 
-✔ 中间可滚动
-✔ 底部按钮固定
-✔ 暗色模式自动适配
-
-四、无障碍测试示例（Compose Test）
-
-测试点：
-
-折叠前不可见
-
-点击后可见
-
-TalkBack 描述存在
-
-4️⃣ 测试代码
-@get:Rule
-val composeTestRule = createComposeRule()
-
-@Test
-fun expandableSection_accessibility_test() {
-    composeTestRule.setContent {
-        AppTheme {
-            ExpandableSection(
-                icon = Icons.Default.Info,
-                title = "Accessibility Test",
-                detail = "Detail",
-                bullets = listOf("Bullet One", "Bullet Two")
-            )
-        }
-    }
-
-    // 初始状态：不可见
-    composeTestRule
-        .onNodeWithText("Bullet One")
-        .assertDoesNotExist()
-
-    // 点击展开
-    composeTestRule
-        .onNodeWithContentDescription("Expand section Accessibility Test")
-        .performClick()
-
-    // 展开后可见
-    composeTestRule
-        .onNodeWithContentDescription("Bullet item: Bullet One")
-        .assertIsDisplayed()
-
-    composeTestRule
-        .onNodeWithContentDescription("Bullet item: Bullet Two")
-        .assertIsDisplayed()
+@Preview(showBackground = true, widthDp = 360)
+@Composable
+fun WrapTabTablePreview() {
+    WrapTabTableDemo()
 }
+
 
 ---
 category: Components
